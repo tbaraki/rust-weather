@@ -33,10 +33,12 @@ struct Weather {
 
 #[derive(Deserialize, Debug)]
 struct Current {
-    temperature_2m: f32,
+    #[serde(rename = "temperature_2m")]
+    temp: f32,
     precipitation: f32,
     cloud_cover: f32,
-    wind_gusts_10m: f32,
+    #[serde(rename = "wind_gusts_10m")]
+    wind: f32,
 }
 
 fn main() {
@@ -46,14 +48,24 @@ fn main() {
     debug!("Zipcode: {}", args.zip);
 
     match get_location(args.zip) {
-        Ok((lat, lon, city, state)) => {
-            debug!("Retrieved coordinates: lat={}, lon={}, city={}, state={}", lat, lon, city, state);
-            println!("Fetching weather for {}, {}...\n", city, state);
+        Ok(location) => {
+            debug!("Retrieved location data: lat={}, lon={}, city={}, state={}",
+                location.places[0].latitude,
+                location.places[0].longitude,
+                location.places[0].city,
+                location.places[0].state);
+            println!("Fetching weather for {}, {}...\n",
+                location.places[0].city,
+                location.places[0].state);
 
-            match get_weather(lat, lon) {
-                Ok((temp, precip, cloud, wind)) => {
-                    println!("The temperature is {}°F with a cloud cover of {}%.", temp, cloud);
-                    println!("You can expect {}\" of rain with winds gusting to {} mph.", precip, wind);
+            match get_weather(location) {
+                Ok(weather) => {
+                    println!("The temperature is {}°F with a cloud cover of {}%.",
+                        weather.current.temp,
+                        weather.current.cloud_cover);
+                    println!("You can expect {}\" of rain with winds gusting to {} mph.",
+                        weather.current.precipitation,
+                        weather.current.wind);
                 }
                 Err(e) => {
                     error!("Failed to get weather. {}", e);
@@ -66,7 +78,7 @@ fn main() {
     }
 }
 
-fn get_location(zip: String) -> Result<(f64, f64, String, String), Box<dyn std::error::Error>> {
+fn get_location(zip: String) -> Result<Location, Box<dyn std::error::Error>> {
     let url = format!("https://api.zippopotam.us/us/{zipcode}", zipcode = &zip);
     debug!("URL: {}", url);
 
@@ -74,19 +86,19 @@ fn get_location(zip: String) -> Result<(f64, f64, String, String), Box<dyn std::
     if !resp.status().is_success() {
         return Err(format!("Request failed with status: {}", resp.status()).into());
     }
-    let body: Location = serde_json::from_str(&resp.text()?)?;
-    let lat: f64 = body.places[0].latitude.parse()?;
-    let lon: f64 = body.places[0].longitude.parse()?;
-    let city = body.places[0].city.clone();
-    let state = body.places[0].state.clone();
+    let location: Location = serde_json::from_str(&resp.text()?)?;
 
-    debug!("Latitude: {}, Longitude: {}", lat, lon);
+    debug!("Latitude: {}, Longitude: {}",
+        location.places[0].latitude,
+        location.places[0].longitude);
 
-    Ok((lat, lon, city, state))
+    Ok(location)
 }
 
-fn get_weather(lat: f64, lon: f64) -> Result<(f32, f32, f32, f32), Box<dyn std::error::Error>> {
-    let url = format!("https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch", lat = lat, lon = lon);
+fn get_weather(location: Location) -> Result<Weather, Box<dyn std::error::Error>> {
+    let url = format!("https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch",
+        lat = location.places[0].latitude,
+        lon = location.places[0].longitude);
 
     debug!("Weather URL: {}", url);
 
@@ -94,12 +106,12 @@ fn get_weather(lat: f64, lon: f64) -> Result<(f32, f32, f32, f32), Box<dyn std::
     if !resp.status().is_success() {
         return Err(format!("Request failed with status: {}", resp.status()).into());
     }
-    let body: Weather = serde_json::from_str(&resp.text()?)?;
-    let temp: f32 = body.current.temperature_2m;
-    let precip: f32 = body.current.precipitation;
-    let cloud: f32 = body.current.cloud_cover;
-    let wind: f32 = body.current.wind_gusts_10m;
-    debug!("Temperature: {}, Precipitation: {}, Cloud Cover: {}, Wind Gusts: {}", temp, precip, cloud, wind);
+    let weather: Weather = serde_json::from_str(&resp.text()?)?;
+    debug!("Temperature: {}, Precipitation: {}, Cloud Cover: {}, Wind Gusts: {}",
+        weather.current.temp,
+        weather.current.precipitation,
+        weather.current.cloud_cover,
+        weather.current.wind);
 
-    Ok((temp, precip, cloud, wind))
+    Ok(weather)
 }
