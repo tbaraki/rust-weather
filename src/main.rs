@@ -42,18 +42,13 @@ struct Current {
 }
 
 fn main() {
-    env_logger::init();
+    //env_logger::init();
 
     let args = Args::parse();
     debug!("Zipcode: {}", args.zip);
 
     match get_location(args.zip) {
         Ok(location) => {
-            debug!("Retrieved location data: lat={}, lon={}, city={}, state={}",
-                location.places[0].latitude,
-                location.places[0].longitude,
-                location.places[0].city,
-                location.places[0].state);
             println!("Fetching weather for {}, {}...\n",
                 location.places[0].city,
                 location.places[0].state);
@@ -80,17 +75,12 @@ fn main() {
 
 fn get_location(zip: String) -> Result<Location, Box<dyn std::error::Error>> {
     let url = format!("https://api.zippopotam.us/us/{zipcode}", zipcode = &zip);
-    debug!("URL: {}", url);
 
     let resp = reqwest::blocking::get(&url)?;
     if !resp.status().is_success() {
         return Err(format!("Request failed with status: {}", resp.status()).into());
     }
     let location: Location = serde_json::from_str(&resp.text()?)?;
-
-    debug!("Latitude: {}, Longitude: {}",
-        location.places[0].latitude,
-        location.places[0].longitude);
 
     Ok(location)
 }
@@ -107,11 +97,6 @@ fn get_weather(location: Location) -> Result<Weather, Box<dyn std::error::Error>
         return Err(format!("Request failed with status: {}", resp.status()).into());
     }
     let weather: Weather = serde_json::from_str(&resp.text()?)?;
-    debug!("Temperature: {}, Precipitation: {}, Cloud Cover: {}, Wind Gusts: {}",
-        weather.current.temp,
-        weather.current.precipitation,
-        weather.current.cloud_cover,
-        weather.current.wind);
 
     Ok(weather)
 }
