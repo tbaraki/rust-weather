@@ -1,7 +1,7 @@
 use clap::Parser;
+use log::{debug, error};
 use reqwest;
 use serde::Deserialize;
-use log::{debug, error};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -49,18 +49,21 @@ fn main() {
 
     match get_location(args.zip) {
         Ok(location) => {
-            println!("Fetching weather for {}, {}...\n",
-                location.places[0].city,
-                location.places[0].state);
+            println!(
+                "Fetching weather for {}, {}...\n",
+                location.places[0].city, location.places[0].state
+            );
 
             match get_weather(location) {
                 Ok(weather) => {
-                    println!("The temperature is {}°F with a cloud cover of {}%.",
-                        weather.current.temp,
-                        weather.current.cloud_cover);
-                    println!("You can expect {}\" of rain with winds gusting to {} mph.",
-                        weather.current.precipitation,
-                        weather.current.wind);
+                    println!(
+                        "The temperature is {}°F with a cloud cover of {}%.",
+                        weather.current.temp, weather.current.cloud_cover
+                    );
+                    println!(
+                        "You can expect {}\" of rain with winds gusting to {} mph.",
+                        weather.current.precipitation, weather.current.wind
+                    );
                 }
                 Err(e) => {
                     error!("Failed to get weather. {}", e);
@@ -86,11 +89,11 @@ fn get_location(zip: String) -> Result<Location, Box<dyn std::error::Error>> {
 }
 
 fn get_weather(location: Location) -> Result<Weather, Box<dyn std::error::Error>> {
-    let url = format!("https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch",
+    let url = format!(
+        "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch",
         lat = location.places[0].latitude,
-        lon = location.places[0].longitude);
-
-    debug!("Weather URL: {}", url);
+        lon = location.places[0].longitude
+    );
 
     let resp = reqwest::blocking::get(&url)?;
     if !resp.status().is_success() {
