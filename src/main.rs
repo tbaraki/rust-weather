@@ -34,7 +34,7 @@ struct Weather {
 
 #[derive(Deserialize, Debug)]
 struct Daily {
-    #[serde(rename = "apparent_temperature_max")]
+    #[serde(rename = "temperature_2m_max")]
     max_temp: Vec<f32>,
 }
 
@@ -98,7 +98,7 @@ fn get_location(zip: String) -> Result<Location, Box<dyn std::error::Error>> {
 
 fn get_weather(location: Location) -> Result<Weather, Box<dyn std::error::Error>> {
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=apparent_temperature_max&forecast_days=1&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch",
+        "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max&forecast_days=1&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch",
         lat = location.places[0].latitude,
         lon = location.places[0].longitude
     );
