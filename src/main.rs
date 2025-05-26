@@ -29,6 +29,13 @@ struct Place {
 #[derive(Deserialize, Debug)]
 struct Weather {
     current: Current,
+    daily: Daily,
+}
+
+#[derive(Deserialize, Debug)]
+struct Daily {
+    #[serde(rename = "apparent_temperature_max")]
+    max_temp: Vec<f32>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -42,7 +49,7 @@ struct Current {
 }
 
 fn main() {
-    //env_logger::init();
+    env_logger::init();
 
     let args = Args::parse();
     debug!("Zipcode: {}", args.zip);
@@ -57,13 +64,14 @@ fn main() {
             match get_weather(location) {
                 Ok(weather) => {
                     println!(
-                        "The temperature is {}°F with a cloud cover of {}%.",
-                        weather.current.temp, weather.current.cloud_cover
+                        "It is currently {}°F with a high of {}°F.",
+                        weather.current.temp, weather.daily.max_temp[0]
                     );
                     println!(
-                        "You can expect {}\" of rain with winds gusting to {} mph.",
-                        weather.current.precipitation, weather.current.wind
+                        "Cloud cover is {}%. You can expect {}\" of rain.",
+                        weather.current.cloud_cover, weather.current.precipitation
                     );
+                    println!("Winds are gusting to {}mph.", weather.current.wind)
                 }
                 Err(e) => {
                     error!("Failed to get weather. {}", e);
@@ -90,10 +98,11 @@ fn get_location(zip: String) -> Result<Location, Box<dyn std::error::Error>> {
 
 fn get_weather(location: Location) -> Result<Weather, Box<dyn std::error::Error>> {
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch",
+        "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=apparent_temperature_max&forecast_days=1&current=temperature_2m,precipitation,cloud_cover,wind_gusts_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch",
         lat = location.places[0].latitude,
         lon = location.places[0].longitude
     );
+    debug!("URL: {}", url);
 
     let resp = reqwest::blocking::get(&url)?;
     if !resp.status().is_success() {
